@@ -1,1 +1,555 @@
-{"appVersion":"248.0.16","id":"ur3k5doy05","name":"List-Unsubscribe-with-sf-consent","version":1,"modelVersion":"4","references":{"assets/234354":[{"identifier":"dataExtensions/7f0b511d-0fe1-ee11-b85b-48df37d1db1e","relationship":"required"},{"identifier":"dataExtensions/800b511d-0fe1-ee11-b85b-48df37d1db1e","relationship":"required"},{"identifier":"categories/383877","relationship":"required"}],"categories/383877":[{"identifier":"categories/383766","relationship":"required"}],"categories/383766":[{"identifier":"categories/9838","relationship":"required"}],"categories/9838":[],"dataExtensions/7f0b511d-0fe1-ee11-b85b-48df37d1db1e":[{"identifier":"categories/383772","relationship":"required"}],"dataExtensions/800b511d-0fe1-ee11-b85b-48df37d1db1e":[{"identifier":"categories/383772","relationship":"required"}],"categories/383772":[{"identifier":"categories/383769","relationship":"required"}],"categories/383769":[{"identifier":"categories/383767","relationship":"required"}],"categories/383767":[{"identifier":"categories/9824","relationship":"required"}],"categories/9824":[]},"input":[],"config":{"preserveCategories":true,"storeImagesAsReferences":false},"entities":{"assets":{"234354":{"issues":[{"type":"UNSUPPORTED_AMPSCRIPT","level":"INFO","sourceJobType":"PACKAGE","issue":"UNRESOLVED_VARIABLE"},{"type":"UNSUPPORTED_AMPSCRIPT","level":"WARNING","sourceJobType":"PACKAGE","issue":"UNSUPPORTED_FUNCTION_TYPE","name":"SALESFORCE"}],"originID":"234354","originEID":"mcxcp8t377983w8g503nvz054988","data":{"assetType":{"id":220,"name":"codesnippetblock"},"name":"EventNotification_CallBackURL_SSJS_Unsubscribe","category":{"id":"{{mcpm#/entities/categories/383877/data/id}}"},"content":"<script runat=\"server\">\n  Platform.Load(\"Core\",\"1\");\n  \n  try{\n    var jsonpost = Platform.Request.GetPostData(0);\n    var json = Platform.Function.ParseJSON(jsonpost);\n    \n    var eventCategoryType = json[0].eventCategoryType;\n    \n    Write(\"The eventCategoryType is: \" + eventCategoryType)\n    if (eventCategoryType == \"EngagementEvents.EmailUnsubscribe\") {\n      var MessageType = json[0].eventCategoryType;\n      var messageKey = json[0].info.messageKey;\n      var jobId = json[0].composite.jobId;\n      var batchId = json[0].composite.batchId;\n      var listId = json[0].composite.listId;\n      var subscriberId = json[0].composite.subscriberId;\n      var emailId = json[0].composite.emailId;\n      var definitionKey = json[0].definitionKey;\n      var mid = json[0].mid;\n      var eid = json[0].eid;\n      var Email = json[0].info.to;\n      var subscriberKey = json[0].info.subscriberKey;\n      var definitionId = json[0].definitionId;\n      var compositeId = json[0].compositeId;\n      var unsubscribeMethod = json[0].info.unsubscribeMethod\n      \n      var timestampUTC = json[0].timestampUTC;\n      timestampUTC = new Date(timestampUTC);\n      \n      var unsubscribeDate = json[0].info.unsubscribeDate\n      unsubscribeDate = new Date(unsubscribeDate);\n\n      \n      var insertResponse = Platform.Function.InsertData(\"{{mcpm#/entities/dataExtensions/800b511d-0fe1-ee11-b85b-48df37d1db1e/data/name}}\",[\"MessageType\",\"jobId\",\"batchId\",\"listId\",\"subscriberId\",\"emailId\",\"definitionKey\",\"mid\",\"eid\",\"Email\",\"subscriberKey\",\"definitionId\",\"compositeId\",\"timestampUTC\", \"unsubscribeMethod\", \"unsubscribeDate\"],[MessageType,jobId,batchId,listId,subscriberId,emailId,definitionKey,mid,eid,Email,subscriberKey,definitionId,compositeId,timestampUTC, unsubscribeMethod, unsubscribeDate]);\n\n      Variable.SetValue(\"@subscriberId\",subscriberId);\n</script>\n%%[\nOUTPUTLINE(CONCAT(\"This is the subscriberId: \" ,@subscriberId))\nSET @SubscriberKeyRows = LOOKUPROWS(\"ENT._Subscribers\", \"Subscriberid\", @subscriberId)\nSET @SubscriberKeyRowCount = ROWCOUNT(@SubscriberKeyRows)\n\nIF @SubscriberKeyRowCount > 0 THEN \n\n    SET @SubscriberKeyRow = ROW(@SubscriberKeyRows, 1)\n    SET @SubscriberKey    = FIELD(@SubscriberKeyRow, \"SubscriberKey\")\n    OUTPUTLINE(CONCAT(\"This is the SubscriberKey: \" ,@SubscriberKey))\nENDIF\n\nset @CPTCRows = RetrieveSalesforceObjects(\n                \"ContactPointTypeConsent\",\n                \"PrivacyConsentStatus, id, PartyId, relatedContact__c, CaptureDate\", \n                \"relatedContact__c\", \"=\", @SubscriberKey,\n                \"ContactPointType\", \"=\", \"Email\",\n                \"PrivacyConsentStatus\", \"=\", \"OptIn\")\n\nIF ROWCOUNT(@CPTCRows) > 0 THEN \n\n    SET @CPTCRow = ROW(@CPTCRows, 1)\n    SET @CPTCid    = FIELD(@CPTCRow, \"id\")\n    SET @updateCPTCRecord = UpdateSingleSalesforceObject(\n                \"ContactPointTypeConsent\", @CPTCid,\n                \"PrivacyConsentStatus\", \"OptOut\",\n                \"CaptureSource\", \"Email\",\n                \"CaptureContactPointType\", \"Email\",\n                \"EffectiveTo\", FORMATDATE(NOW(),\"iso\"),\n                \"CaptureDate\", FORMATDATE(NOW(),\"iso\")\n                )\n    OUTPUTLINE(CONCAT(\"This is the CPTCid: \" ,@CPTCid))\nENDIF\n]%%<script runat=\"server\">\n    } else { \n      var Weebhookinformation = DataExtension.Init(\"{{mcpm#/entities/dataExtensions/7f0b511d-0fe1-ee11-b85b-48df37d1db1e/data/customerKey}}\");\n      Weebhookinformation.Rows.Add({\n        Message: Stringify(jsonpost)\n      });\n      Write(\"Valid Payload but not Unsubscribed Event\")\n    }\n  } catch (error) {\n    var Weebhookinformation = DataExtension.Init(\"{{mcpm#/entities/dataExtensions/7f0b511d-0fe1-ee11-b85b-48df37d1db1e/data/customerKey}}\");\n      Weebhookinformation.Rows.Add({\n        Message: Stringify(error)\n      });\n    Write(\"There was an error\")\n    Write(Stringify(error))\n  }\n</script>","fileProperties":{"fileName":"EventNotification_CallBackURL_SSJS"}}}},"attributeGroups":{},"attributeRelationships":{},"attributeSets":{},"automations":{},"categories":{"9824":{"issues":[],"originID":"9824","originEID":"mcxcp8t377983w8g503nvz054988","data":{"description":"","categoryType":"dataextension","parentId":0,"name":"Data Extensions","editable":0,"extendable":1}},"9838":{"issues":[],"originID":"9838","originEID":"mcxcp8t377983w8g503nvz054988","data":{"description":"The root folder for assets","categoryType":"asset","parentId":0,"name":"Content Builder","editable":0,"extendable":1}},"383766":{"issues":[],"originID":"383766","originEID":"mcxcp8t377983w8g503nvz054988","data":{"description":"","categoryType":"asset","parentId":"{{mcpm#/entities/categories/9838/data/id}}","name":"99_System","editable":1,"extendable":0}},"383767":{"issues":[],"originID":"383767","originEID":"mcxcp8t377983w8g503nvz054988","data":{"description":"","categoryType":"dataextension","parentId":"{{mcpm#/entities/categories/9824/data/id}}","name":"99_System","editable":1,"extendable":1}},"383769":{"issues":[],"originID":"383769","originEID":"mcxcp8t377983w8g503nvz054988","data":{"description":"","categoryType":"dataextension","parentId":"{{mcpm#/entities/categories/383767/data/id}}","name":"Transactional","editable":1,"extendable":1}},"383772":{"issues":[],"originID":"383772","originEID":"mcxcp8t377983w8g503nvz054988","data":{"description":"","categoryType":"dataextension","parentId":"{{mcpm#/entities/categories/383769/data/id}}","name":"CallBackURL","editable":1,"extendable":1}},"383877":{"issues":[],"originID":"383877","originEID":"mcxcp8t377983w8g503nvz054988","data":{"description":"","categoryType":"asset","parentId":"{{mcpm#/entities/categories/383766/data/id}}","name":"AMPscript_Snippets","editable":1,"extendable":0}}},"cloudPageCollections":{},"codeResources":{},"dataExtensions":{"7f0b511d-0fe1-ee11-b85b-48df37d1db1e":{"issues":[],"originID":"7f0b511d-0fe1-ee11-b85b-48df37d1db1e","originEID":"mcxcp8t377983w8g503nvz054988","data":{"categoryId":"{{mcpm#/entities/categories/383772/data/id}}","dataRetentionProperties":{"isDeleteAtEndOfRetentionPeriod":false,"isResetRetentionPeriodOnImport":false,"isRowBasedRetention":false,"rowBasedThreshold":500000000},"description":"","isFieldAdditionAllowed":true,"isFieldModificationAllowed":true,"isObjectDeletable":true,"isSendable":false,"isTestable":false,"name":"ErrorLog","fields":[{"description":"","isHidden":false,"isInheritable":false,"isOverridable":false,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"length":4000,"masktype":"None","mustOverride":false,"name":"Message","ordinal":0,"type":"Text"}]}},"800b511d-0fe1-ee11-b85b-48df37d1db1e":{"issues":[],"originID":"800b511d-0fe1-ee11-b85b-48df37d1db1e","originEID":"mcxcp8t377983w8g503nvz054988","data":{"categoryId":"{{mcpm#/entities/categories/383772/data/id}}","dataRetentionProperties":{"isDeleteAtEndOfRetentionPeriod":false,"isResetRetentionPeriodOnImport":false,"isRowBasedRetention":false,"rowBasedThreshold":500000000},"description":"","isFieldAdditionAllowed":true,"isFieldModificationAllowed":true,"isObjectDeletable":true,"isSendable":false,"isTestable":false,"name":"Transactional_Event_Notification_Service","fields":[{"description":"","isHidden":false,"isInheritable":true,"isOverridable":true,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"length":100,"masktype":"None","mustOverride":false,"name":"MessageType","ordinal":0,"type":"Text"},{"description":"","isHidden":false,"isInheritable":true,"isOverridable":true,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"masktype":"None","mustOverride":false,"name":"jobId","ordinal":1,"type":"Number"},{"description":"","isHidden":false,"isInheritable":true,"isOverridable":true,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"masktype":"None","mustOverride":false,"name":"batchId","ordinal":2,"type":"Number"},{"description":"","isHidden":false,"isInheritable":true,"isOverridable":true,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"length":50,"masktype":"None","mustOverride":false,"name":"listId","ordinal":3,"type":"Text"},{"description":"","isHidden":false,"isInheritable":true,"isOverridable":true,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"length":50,"masktype":"None","mustOverride":false,"name":"subscriberId","ordinal":4,"type":"Text"},{"description":"","isHidden":false,"isInheritable":true,"isOverridable":true,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"length":50,"masktype":"None","mustOverride":false,"name":"emailId","ordinal":5,"type":"Text"},{"description":"","isHidden":false,"isInheritable":true,"isOverridable":true,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"length":100,"masktype":"None","mustOverride":false,"name":"definitionKey","ordinal":6,"type":"Text"},{"description":"","isHidden":false,"isInheritable":true,"isOverridable":true,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"masktype":"None","mustOverride":false,"name":"MID","ordinal":7,"type":"Number"},{"description":"","isHidden":false,"isInheritable":true,"isOverridable":true,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"masktype":"None","mustOverride":false,"name":"eid","ordinal":8,"type":"Number"},{"description":"","isHidden":false,"isInheritable":true,"isOverridable":true,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"length":254,"masktype":"None","mustOverride":false,"name":"email","ordinal":9,"type":"EmailAddress"},{"description":"","isHidden":false,"isInheritable":true,"isOverridable":true,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"length":50,"masktype":"None","mustOverride":false,"name":"subscriberKey","ordinal":10,"type":"Text"},{"description":"","isHidden":false,"isInheritable":true,"isOverridable":true,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"length":100,"masktype":"None","mustOverride":false,"name":"definitionId","ordinal":11,"type":"Text"},{"description":"","isHidden":false,"isInheritable":true,"isOverridable":true,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"length":100,"masktype":"None","mustOverride":false,"name":"compositeId","ordinal":12,"type":"Text"},{"description":"","isHidden":false,"isInheritable":true,"isOverridable":true,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"masktype":"None","mustOverride":false,"name":"timestampUTC","ordinal":13,"type":"Date"},{"description":"","isHidden":false,"isInheritable":false,"isOverridable":false,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"length":500,"masktype":"None","mustOverride":false,"name":"errorMessage","ordinal":14,"type":"Text"},{"description":"","isHidden":false,"isInheritable":false,"isOverridable":false,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"length":50,"masktype":"None","mustOverride":false,"name":"bounceCode","ordinal":15,"type":"Text"},{"description":"","isHidden":false,"isInheritable":false,"isOverridable":false,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"length":500,"masktype":"None","mustOverride":false,"name":"bounceMessage","ordinal":16,"type":"Text"},{"description":"","isHidden":false,"isInheritable":false,"isOverridable":false,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"length":400,"masktype":"None","mustOverride":false,"name":"smtpReason","ordinal":17,"type":"Text"},{"description":"","isHidden":false,"isInheritable":false,"isOverridable":false,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"length":50,"masktype":"None","mustOverride":false,"name":"renderedSubject","ordinal":18,"type":"Text"},{"description":"","isHidden":false,"isInheritable":false,"isOverridable":false,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"length":50,"masktype":"None","mustOverride":false,"name":"messageKey","ordinal":19,"type":"Text"},{"description":"","isHidden":false,"isInheritable":false,"isOverridable":false,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"masktype":"None","mustOverride":false,"name":"unsubscribeDate","ordinal":20,"type":"Date"},{"description":"","isHidden":false,"isInheritable":false,"isOverridable":false,"isNullable":true,"isPrimaryKey":false,"isReadOnly":false,"isTemplateField":false,"length":50,"masktype":"None","mustOverride":false,"name":"unsubscribeMethod","ordinal":21,"type":"Text"}]}}},"dataExtractActivities":{},"dataFilterDefinitions":{},"dataFilters":{},"eventDefinitions":{},"fileTransferActivities":{},"importActivities":{},"journeys":{},"journeyTemplates":{},"landingPages":{},"microsites":{},"micrositePages":{},"micrositePageVersions":{},"primaryLandingPages":{},"queryActivities":{},"registeredCustomActivities":{},"scriptActivities":{},"sendDefinitions":{},"sharedDataExtensions":{},"siteMapVersions":{},"subscriberLists":{},"verificationActivities":{}},"selectedEntities":{"assets":[234354],"attributeGroups":[],"automations":[],"cloudPageCollections":[],"dataExtensions":[],"journeys":[],"journeyTemplates":[],"sharedDataExtensions":[]}}
+{
+    "appVersion": "248.0.16",
+    "id": "ur3k5doy05",
+    "name": "List-Unsubscribe-with-sf-consent",
+    "version": 1,
+    "modelVersion": "4",
+    "references": {
+        "assets/234354": [
+            {
+                "identifier": "dataExtensions/7f0b511d-0fe1-ee11-b85b-48df37d1db1e",
+                "relationship": "required"
+            },
+            {
+                "identifier": "dataExtensions/800b511d-0fe1-ee11-b85b-48df37d1db1e",
+                "relationship": "required"
+            },
+            {
+                "identifier": "categories/383877",
+                "relationship": "required"
+            }
+        ],
+        "categories/383877": [
+            {
+                "identifier": "categories/383766",
+                "relationship": "required"
+            }
+        ],
+        "categories/383766": [
+            {
+                "identifier": "categories/9838",
+                "relationship": "required"
+            }
+        ],
+        "categories/9838": [],
+        "dataExtensions/7f0b511d-0fe1-ee11-b85b-48df37d1db1e": [
+            {
+                "identifier": "categories/383772",
+                "relationship": "required"
+            }
+        ],
+        "dataExtensions/800b511d-0fe1-ee11-b85b-48df37d1db1e": [
+            {
+                "identifier": "categories/383772",
+                "relationship": "required"
+            }
+        ],
+        "categories/383772": [
+            {
+                "identifier": "categories/383769",
+                "relationship": "required"
+            }
+        ],
+        "categories/383769": [
+            {
+                "identifier": "categories/383767",
+                "relationship": "required"
+            }
+        ],
+        "categories/383767": [
+            {
+                "identifier": "categories/9824",
+                "relationship": "required"
+            }
+        ],
+        "categories/9824": []
+    },
+    "input": [],
+    "config": {
+        "preserveCategories": true,
+        "storeImagesAsReferences": false
+    },
+    "entities": {
+        "assets": {
+            "234354": {
+                "issues": [
+                    {
+                        "type": "UNSUPPORTED_AMPSCRIPT",
+                        "level": "INFO",
+                        "sourceJobType": "PACKAGE",
+                        "issue": "UNRESOLVED_VARIABLE"
+                    },
+                    {
+                        "type": "UNSUPPORTED_AMPSCRIPT",
+                        "level": "WARNING",
+                        "sourceJobType": "PACKAGE",
+                        "issue": "UNSUPPORTED_FUNCTION_TYPE",
+                        "name": "SALESFORCE"
+                    }
+                ],
+                "originID": "234354",
+                "originEID": "mcxcp8t377983w8g503nvz054988",
+                "data": {
+                    "assetType": {
+                        "id": 220,
+                        "name": "codesnippetblock"
+                    },
+                    "name": "EventNotification_CallBackURL_SSJS_Unsubscribe",
+                    "category": {
+                        "id": "{{mcpm#/entities/categories/383877/data/id}}"
+                    },
+                    "content": "<script runat=\"server\">\n  Platform.Load(\"Core\",\"1\");\n  \n  try{\n    var jsonpost = Platform.Request.GetPostData(0);\n    var json = Platform.Function.ParseJSON(jsonpost);\n    \n    var eventCategoryType = json[0].eventCategoryType;\n    \n    Write(\"The eventCategoryType is: \" + eventCategoryType)\n    if (eventCategoryType == \"EngagementEvents.EmailUnsubscribe\") {\n      var MessageType = json[0].eventCategoryType;\n      var messageKey = json[0].info.messageKey;\n      var jobId = json[0].composite.jobId;\n      var batchId = json[0].composite.batchId;\n      var listId = json[0].composite.listId;\n      var subscriberId = json[0].composite.subscriberId;\n      var emailId = json[0].composite.emailId;\n      var definitionKey = json[0].definitionKey;\n      var mid = json[0].mid;\n      var eid = json[0].eid;\n      var Email = json[0].info.to;\n      var subscriberKey = json[0].info.subscriberKey;\n      var definitionId = json[0].definitionId;\n      var compositeId = json[0].compositeId;\n      var unsubscribeMethod = json[0].info.unsubscribeMethod\n      \n      var timestampUTC = json[0].timestampUTC;\n      timestampUTC = new Date(timestampUTC);\n      \n      var unsubscribeDate = json[0].info.unsubscribeDate\n      unsubscribeDate = new Date(unsubscribeDate);\n\n      \n      var insertResponse = Platform.Function.InsertData(\"{{mcpm#/entities/dataExtensions/800b511d-0fe1-ee11-b85b-48df37d1db1e/data/name}}\",[\"MessageType\",\"jobId\",\"batchId\",\"listId\",\"subscriberId\",\"emailId\",\"definitionKey\",\"mid\",\"eid\",\"Email\",\"subscriberKey\",\"definitionId\",\"compositeId\",\"timestampUTC\", \"unsubscribeMethod\", \"unsubscribeDate\"],[MessageType,jobId,batchId,listId,subscriberId,emailId,definitionKey,mid,eid,Email,subscriberKey,definitionId,compositeId,timestampUTC, unsubscribeMethod, unsubscribeDate]);\n\n      Variable.SetValue(\"@subscriberId\",subscriberId);\n</script>\n%%[\nOUTPUTLINE(CONCAT(\"This is the subscriberId: \" ,@subscriberId))\nSET @SubscriberKeyRows = LOOKUPROWS(\"ENT._Subscribers\", \"Subscriberid\", @subscriberId)\nSET @SubscriberKeyRowCount = ROWCOUNT(@SubscriberKeyRows)\n\nIF @SubscriberKeyRowCount > 0 THEN \n\n    SET @SubscriberKeyRow = ROW(@SubscriberKeyRows, 1)\n    SET @SubscriberKey    = FIELD(@SubscriberKeyRow, \"SubscriberKey\")\n    OUTPUTLINE(CONCAT(\"This is the SubscriberKey: \" ,@SubscriberKey))\nENDIF\n\nset @CPTCRows = RetrieveSalesforceObjects(\n                \"ContactPointTypeConsent\",\n                \"PrivacyConsentStatus, id, PartyId, relatedContact__c, CaptureDate\", \n                \"relatedContact__c\", \"=\", @SubscriberKey,\n                \"ContactPointType\", \"=\", \"Email\",\n                \"PrivacyConsentStatus\", \"=\", \"OptIn\")\n\nIF ROWCOUNT(@CPTCRows) > 0 THEN \n\n    SET @CPTCRow = ROW(@CPTCRows, 1)\n    SET @CPTCid    = FIELD(@CPTCRow, \"id\")\n    SET @updateCPTCRecord = UpdateSingleSalesforceObject(\n                \"ContactPointTypeConsent\", @CPTCid,\n                \"PrivacyConsentStatus\", \"OptOut\",\n                \"CaptureSource\", \"Email\",\n                \"CaptureContactPointType\", \"Email\",\n                \"EffectiveTo\", FORMATDATE(NOW(),\"iso\"),\n                \"CaptureDate\", FORMATDATE(NOW(),\"iso\")\n                )\n    OUTPUTLINE(CONCAT(\"This is the CPTCid: \" ,@CPTCid))\nENDIF\n]%%<script runat=\"server\">\n    } else { \n      var Weebhookinformation = DataExtension.Init(\"{{mcpm#/entities/dataExtensions/7f0b511d-0fe1-ee11-b85b-48df37d1db1e/data/customerKey}}\");\n      Weebhookinformation.Rows.Add({\n        Message: Stringify(jsonpost)\n      });\n      Write(\"Valid Payload but not Unsubscribed Event\")\n    }\n  } catch (error) {\n    var Weebhookinformation = DataExtension.Init(\"{{mcpm#/entities/dataExtensions/7f0b511d-0fe1-ee11-b85b-48df37d1db1e/data/customerKey}}\");\n      Weebhookinformation.Rows.Add({\n        Message: Stringify(error)\n      });\n    Write(\"There was an error\")\n    Write(Stringify(error))\n  }\n</script>",
+                    "fileProperties": {
+                        "fileName": "EventNotification_CallBackURL_SSJS"
+                    }
+                }
+            }
+        },
+        "attributeGroups": {},
+        "attributeRelationships": {},
+        "attributeSets": {},
+        "automations": {},
+        "categories": {
+            "9824": {
+                "issues": [],
+                "originID": "9824",
+                "originEID": "mcxcp8t377983w8g503nvz054988",
+                "data": {
+                    "description": "",
+                    "categoryType": "dataextension",
+                    "parentId": 0,
+                    "name": "Data Extensions",
+                    "editable": 0,
+                    "extendable": 1
+                }
+            },
+            "9838": {
+                "issues": [],
+                "originID": "9838",
+                "originEID": "mcxcp8t377983w8g503nvz054988",
+                "data": {
+                    "description": "The root folder for assets",
+                    "categoryType": "asset",
+                    "parentId": 0,
+                    "name": "Content Builder",
+                    "editable": 0,
+                    "extendable": 1
+                }
+            },
+            "383766": {
+                "issues": [],
+                "originID": "383766",
+                "originEID": "mcxcp8t377983w8g503nvz054988",
+                "data": {
+                    "description": "",
+                    "categoryType": "asset",
+                    "parentId": "{{mcpm#/entities/categories/9838/data/id}}",
+                    "name": "99_System",
+                    "editable": 1,
+                    "extendable": 0
+                }
+            },
+            "383767": {
+                "issues": [],
+                "originID": "383767",
+                "originEID": "mcxcp8t377983w8g503nvz054988",
+                "data": {
+                    "description": "",
+                    "categoryType": "dataextension",
+                    "parentId": "{{mcpm#/entities/categories/9824/data/id}}",
+                    "name": "99_System",
+                    "editable": 1,
+                    "extendable": 1
+                }
+            },
+            "383769": {
+                "issues": [],
+                "originID": "383769",
+                "originEID": "mcxcp8t377983w8g503nvz054988",
+                "data": {
+                    "description": "",
+                    "categoryType": "dataextension",
+                    "parentId": "{{mcpm#/entities/categories/383767/data/id}}",
+                    "name": "Transactional",
+                    "editable": 1,
+                    "extendable": 1
+                }
+            },
+            "383772": {
+                "issues": [],
+                "originID": "383772",
+                "originEID": "mcxcp8t377983w8g503nvz054988",
+                "data": {
+                    "description": "",
+                    "categoryType": "dataextension",
+                    "parentId": "{{mcpm#/entities/categories/383769/data/id}}",
+                    "name": "CallBackURL",
+                    "editable": 1,
+                    "extendable": 1
+                }
+            },
+            "383877": {
+                "issues": [],
+                "originID": "383877",
+                "originEID": "mcxcp8t377983w8g503nvz054988",
+                "data": {
+                    "description": "",
+                    "categoryType": "asset",
+                    "parentId": "{{mcpm#/entities/categories/383766/data/id}}",
+                    "name": "AMPscript_Snippets",
+                    "editable": 1,
+                    "extendable": 0
+                }
+            }
+        },
+        "cloudPageCollections": {},
+        "codeResources": {},
+        "dataExtensions": {
+            "7f0b511d-0fe1-ee11-b85b-48df37d1db1e": {
+                "issues": [],
+                "originID": "7f0b511d-0fe1-ee11-b85b-48df37d1db1e",
+                "originEID": "mcxcp8t377983w8g503nvz054988",
+                "data": {
+                    "categoryId": "{{mcpm#/entities/categories/383772/data/id}}",
+                    "dataRetentionProperties": {
+                        "isDeleteAtEndOfRetentionPeriod": false,
+                        "isResetRetentionPeriodOnImport": false,
+                        "isRowBasedRetention": false,
+                        "rowBasedThreshold": 500000000
+                    },
+                    "description": "",
+                    "isFieldAdditionAllowed": true,
+                    "isFieldModificationAllowed": true,
+                    "isObjectDeletable": true,
+                    "isSendable": false,
+                    "isTestable": false,
+                    "name": "ErrorLog",
+                    "fields": [
+                        {
+                            "description": "",
+                            "isHidden": false,
+                            "isInheritable": false,
+                            "isOverridable": false,
+                            "isNullable": true,
+                            "isPrimaryKey": false,
+                            "isReadOnly": false,
+                            "isTemplateField": false,
+                            "length": 4000,
+                            "masktype": "None",
+                            "mustOverride": false,
+                            "name": "Message",
+                            "ordinal": 0,
+                            "type": "Text"
+                        }
+                    ]
+                }
+            },
+            "800b511d-0fe1-ee11-b85b-48df37d1db1e": {
+                "issues": [],
+                "originID": "800b511d-0fe1-ee11-b85b-48df37d1db1e",
+                "originEID": "mcxcp8t377983w8g503nvz054988",
+                "data": {
+                    "categoryId": "{{mcpm#/entities/categories/383772/data/id}}",
+                    "dataRetentionProperties": {
+                        "isDeleteAtEndOfRetentionPeriod": false,
+                        "isResetRetentionPeriodOnImport": false,
+                        "isRowBasedRetention": false,
+                        "rowBasedThreshold": 500000000
+                    },
+                    "description": "",
+                    "isFieldAdditionAllowed": true,
+                    "isFieldModificationAllowed": true,
+                    "isObjectDeletable": true,
+                    "isSendable": false,
+                    "isTestable": false,
+                    "name": "Transactional_Event_Notification_Service",
+                    "fields": [
+                        {
+                            "description": "",
+                            "isHidden": false,
+                            "isInheritable": true,
+                            "isOverridable": true,
+                            "isNullable": true,
+                            "isPrimaryKey": false,
+                            "isReadOnly": false,
+                            "isTemplateField": false,
+                            "length": 100,
+                            "masktype": "None",
+                            "mustOverride": false,
+                            "name": "MessageType",
+                            "ordinal": 0,
+                            "type": "Text"
+                        },
+                        {
+                            "description": "",
+                            "isHidden": false,
+                            "isInheritable": true,
+                            "isOverridable": true,
+                            "isNullable": true,
+                            "isPrimaryKey": false,
+                            "isReadOnly": false,
+                            "isTemplateField": false,
+                            "masktype": "None",
+                            "mustOverride": false,
+                            "name": "jobId",
+                            "ordinal": 1,
+                            "type": "Number"
+                        },
+                        {
+                            "description": "",
+                            "isHidden": false,
+                            "isInheritable": true,
+                            "isOverridable": true,
+                            "isNullable": true,
+                            "isPrimaryKey": false,
+                            "isReadOnly": false,
+                            "isTemplateField": false,
+                            "masktype": "None",
+                            "mustOverride": false,
+                            "name": "batchId",
+                            "ordinal": 2,
+                            "type": "Number"
+                        },
+                        {
+                            "description": "",
+                            "isHidden": false,
+                            "isInheritable": true,
+                            "isOverridable": true,
+                            "isNullable": true,
+                            "isPrimaryKey": false,
+                            "isReadOnly": false,
+                            "isTemplateField": false,
+                            "length": 50,
+                            "masktype": "None",
+                            "mustOverride": false,
+                            "name": "listId",
+                            "ordinal": 3,
+                            "type": "Text"
+                        },
+                        {
+                            "description": "",
+                            "isHidden": false,
+                            "isInheritable": true,
+                            "isOverridable": true,
+                            "isNullable": true,
+                            "isPrimaryKey": false,
+                            "isReadOnly": false,
+                            "isTemplateField": false,
+                            "length": 50,
+                            "masktype": "None",
+                            "mustOverride": false,
+                            "name": "subscriberId",
+                            "ordinal": 4,
+                            "type": "Text"
+                        },
+                        {
+                            "description": "",
+                            "isHidden": false,
+                            "isInheritable": true,
+                            "isOverridable": true,
+                            "isNullable": true,
+                            "isPrimaryKey": false,
+                            "isReadOnly": false,
+                            "isTemplateField": false,
+                            "length": 50,
+                            "masktype": "None",
+                            "mustOverride": false,
+                            "name": "emailId",
+                            "ordinal": 5,
+                            "type": "Text"
+                        },
+                        {
+                            "description": "",
+                            "isHidden": false,
+                            "isInheritable": true,
+                            "isOverridable": true,
+                            "isNullable": true,
+                            "isPrimaryKey": false,
+                            "isReadOnly": false,
+                            "isTemplateField": false,
+                            "length": 100,
+                            "masktype": "None",
+                            "mustOverride": false,
+                            "name": "definitionKey",
+                            "ordinal": 6,
+                            "type": "Text"
+                        },
+                        {
+                            "description": "",
+                            "isHidden": false,
+                            "isInheritable": true,
+                            "isOverridable": true,
+                            "isNullable": true,
+                            "isPrimaryKey": false,
+                            "isReadOnly": false,
+                            "isTemplateField": false,
+                            "masktype": "None",
+                            "mustOverride": false,
+                            "name": "MID",
+                            "ordinal": 7,
+                            "type": "Number"
+                        },
+                        {
+                            "description": "",
+                            "isHidden": false,
+                            "isInheritable": true,
+                            "isOverridable": true,
+                            "isNullable": true,
+                            "isPrimaryKey": false,
+                            "isReadOnly": false,
+                            "isTemplateField": false,
+                            "masktype": "None",
+                            "mustOverride": false,
+                            "name": "eid",
+                            "ordinal": 8,
+                            "type": "Number"
+                        },
+                        {
+                            "description": "",
+                            "isHidden": false,
+                            "isInheritable": true,
+                            "isOverridable": true,
+                            "isNullable": true,
+                            "isPrimaryKey": false,
+                            "isReadOnly": false,
+                            "isTemplateField": false,
+                            "length": 254,
+                            "masktype": "None",
+                            "mustOverride": false,
+                            "name": "email",
+                            "ordinal": 9,
+                            "type": "EmailAddress"
+                        },
+                        {
+                            "description": "",
+                            "isHidden": false,
+                            "isInheritable": true,
+                            "isOverridable": true,
+                            "isNullable": true,
+                            "isPrimaryKey": false,
+                            "isReadOnly": false,
+                            "isTemplateField": false,
+                            "length": 50,
+                            "masktype": "None",
+                            "mustOverride": false,
+                            "name": "subscriberKey",
+                            "ordinal": 10,
+                            "type": "Text"
+                        },
+                        {
+                            "description": "",
+                            "isHidden": false,
+                            "isInheritable": true,
+                            "isOverridable": true,
+                            "isNullable": true,
+                            "isPrimaryKey": false,
+                            "isReadOnly": false,
+                            "isTemplateField": false,
+                            "length": 100,
+                            "masktype": "None",
+                            "mustOverride": false,
+                            "name": "definitionId",
+                            "ordinal": 11,
+                            "type": "Text"
+                        },
+                        {
+                            "description": "",
+                            "isHidden": false,
+                            "isInheritable": true,
+                            "isOverridable": true,
+                            "isNullable": true,
+                            "isPrimaryKey": false,
+                            "isReadOnly": false,
+                            "isTemplateField": false,
+                            "length": 100,
+                            "masktype": "None",
+                            "mustOverride": false,
+                            "name": "compositeId",
+                            "ordinal": 12,
+                            "type": "Text"
+                        },
+                        {
+                            "description": "",
+                            "isHidden": false,
+                            "isInheritable": true,
+                            "isOverridable": true,
+                            "isNullable": true,
+                            "isPrimaryKey": false,
+                            "isReadOnly": false,
+                            "isTemplateField": false,
+                            "masktype": "None",
+                            "mustOverride": false,
+                            "name": "timestampUTC",
+                            "ordinal": 13,
+                            "type": "Date"
+                        },
+                        {
+                            "description": "",
+                            "isHidden": false,
+                            "isInheritable": false,
+                            "isOverridable": false,
+                            "isNullable": true,
+                            "isPrimaryKey": false,
+                            "isReadOnly": false,
+                            "isTemplateField": false,
+                            "masktype": "None",
+                            "mustOverride": false,
+                            "name": "unsubscribeDate",
+                            "ordinal": 20,
+                            "type": "Date"
+                        },
+                        {
+                            "description": "",
+                            "isHidden": false,
+                            "isInheritable": false,
+                            "isOverridable": false,
+                            "isNullable": true,
+                            "isPrimaryKey": false,
+                            "isReadOnly": false,
+                            "isTemplateField": false,
+                            "length": 50,
+                            "masktype": "None",
+                            "mustOverride": false,
+                            "name": "unsubscribeMethod",
+                            "ordinal": 21,
+                            "type": "Text"
+                        }
+                    ]
+                }
+            }
+        },
+        "dataExtractActivities": {},
+        "dataFilterDefinitions": {},
+        "dataFilters": {},
+        "eventDefinitions": {},
+        "fileTransferActivities": {},
+        "importActivities": {},
+        "journeys": {},
+        "journeyTemplates": {},
+        "landingPages": {},
+        "microsites": {},
+        "micrositePages": {},
+        "micrositePageVersions": {},
+        "primaryLandingPages": {},
+        "queryActivities": {},
+        "registeredCustomActivities": {},
+        "scriptActivities": {},
+        "sendDefinitions": {},
+        "sharedDataExtensions": {},
+        "siteMapVersions": {},
+        "subscriberLists": {},
+        "verificationActivities": {}
+    },
+    "selectedEntities": {
+        "assets": [
+            234354
+        ],
+        "attributeGroups": [],
+        "automations": [],
+        "cloudPageCollections": [],
+        "dataExtensions": [],
+        "journeys": [],
+        "journeyTemplates": [],
+        "sharedDataExtensions": []
+    }
+}
